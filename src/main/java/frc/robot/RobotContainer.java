@@ -47,7 +47,7 @@ public class RobotContainer {
         NamedCommands.registerCommand("Move Intake Up", intake.MoveIntakeUp());
         NamedCommands.registerCommand("Intake", intake.Intake());
 
-        autoChooser = AutoBuilder.buildAutoChooser("Tests");
+        autoChooser = AutoBuilder.buildAutoChooser("Default");
         SmartDashboard.putData("Auto Mode", autoChooser);
 
         configureBindings();

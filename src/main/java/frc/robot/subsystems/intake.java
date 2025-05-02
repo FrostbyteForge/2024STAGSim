@@ -1,11 +1,14 @@
 package frc.robot.subsystems;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
@@ -25,20 +28,29 @@ public class intake extends SubsystemBase {
     Pose3d drivePose;
     Pose2d intakePose;
     Pose2d nearestNote;
+    List<Pose2d> notePositions = new ArrayList<>();
 
-    Pose2d[] notePoseArray = {
-        (new Pose2d(2.89, 6.99, Rotation2d.kZero)),
-        (new Pose2d(2.89, 5.54, Rotation2d.kZero)),
-        (new Pose2d(2.89, 4.1, Rotation2d.kZero)),
-        (new Pose2d(8.28, 7.44, Rotation2d.kZero)),
-        (new Pose2d(8.28, 5.78, Rotation2d.kZero)),
-        (new Pose2d(8.28, 4.1, Rotation2d.kZero)),
-        (new Pose2d(8.28, 2.44, Rotation2d.kZero)),
-        (new Pose2d(8.28, .77, Rotation2d.kZero)),
-        (new Pose2d(13.67, 6.99, Rotation2d.kZero)),
-        (new Pose2d(13.67, 5.54, Rotation2d.kZero)),
-        (new Pose2d(13.67, 4.1, Rotation2d.kZero))
+    public void notePositions() {
+        notePositions.add(new Pose2d(2.89, 6.99, Rotation2d.kZero));
+        notePositions.add(new Pose2d(2.89, 5.54, Rotation2d.kZero));
+        notePositions.add(new Pose2d(2.89, 4.1, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, 7.44, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, 5.78, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, 4.1, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, 2.44, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, .77, Rotation2d.kZero));
+        notePositions.add(new Pose2d(13.67, 6.99, Rotation2d.kZero));
+        notePositions.add(new Pose2d(13.67, 5.54, Rotation2d.kZero));
+        notePositions.add(new Pose2d(13.67, 4.1, Rotation2d.kZero));
     };
+
+    public void refreshNotes() {
+        Pose3d[] refreshNotes = new Pose3d[notePositions.size()];
+        for (int i = 0; i < notePositions.size(); i++) {
+            refreshNotes[i] = new Pose3d(notePositions.get(i)).transformBy(new Transform3d(0, 0, .025, Rotation3d.kZero));
+        }
+        notePose3D = refreshNotes;
+    }
 
     Pose3d[] notePose3D = {
         (new Pose3d(2.89, 6.99, .025, Rotation3d.kZero)),
@@ -54,11 +66,10 @@ public class intake extends SubsystemBase {
         (new Pose3d(13.67, 4.1, .025, Rotation3d.kZero))
     };
 
-    List<Pose2d> notePositions = Arrays.asList(notePoseArray);
-
     public intake(CommandSwerveDrivetrain drivetrain) {
         this.drivetrain = drivetrain;
         NotePublisher.set(notePose3D);
+        notePositions();
     }
 
     public void moveIntake(int degrees) {
@@ -80,7 +91,10 @@ public class intake extends SubsystemBase {
     public Command Intake() {
         return runOnce(() -> {if(!shooter.Loaded && Math.hypot(intakePose.getX()-nearestNote.getX(), intakePose.getY()-nearestNote.getY()) < .25) {
             shooter.Loaded = true;
+            System.out.println(notePositions.size());
             notePositions.remove(notePositions.indexOf(nearestNote));
+            System.out.println(notePositions.size());
+            refreshNotes();
         }});
     }
 
@@ -89,7 +103,7 @@ public class intake extends SubsystemBase {
         if(DriverStation.isEnabled()) {
             drivePose = new Pose3d(drivetrain.getState().Pose);
             LoadedNotePublisher.set(drivePose);
-            intakePose = new Pose2d(drivePose.getX()+.75, drivePose.getY(), Rotation2d.kZero);
+            intakePose = drivetrain.getState().Pose.transformBy(new Transform2d(-0.75, 0, Rotation2d.kZero));
             nearestNote = new Pose2d(intakePose.nearest(notePositions).getX(), intakePose.nearest(notePositions).getY(), Rotation2d.kZero);
 
             if(IntakeDown && intakeRotation > -87) {
@@ -100,6 +114,7 @@ public class intake extends SubsystemBase {
     
             pose = new Pose3d(-0.2,0,0.064, new Rotation3d(0, Units.degreesToRadians(intakeRotation), 0));
             intakePublisher.set(pose);
+            NotePublisher.set(notePose3D);
         }
     }
 }
