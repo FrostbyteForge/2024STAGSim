@@ -36,8 +36,8 @@ public class RobotContainer {
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
-    public final shooter shooter = new shooter();
     public final intake intake = new intake(drivetrain);
+    public final shooter shooter = new shooter(intake);
 
     /* Path follower */
     private final SendableChooser<Command> autoChooser;
@@ -81,6 +81,10 @@ public class RobotContainer {
         Constants.OperatorConstants.driverController.back().and(Constants.OperatorConstants.driverController.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
         Constants.OperatorConstants.driverController.start().and(Constants.OperatorConstants.driverController.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
         Constants.OperatorConstants.driverController.start().and(Constants.OperatorConstants.driverController.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+
+        Constants.OperatorConstants.driverController.a().whileTrue(intake.MoveIntakeDown()).whileFalse(intake.MoveIntakeUp());
+        Constants.OperatorConstants.driverController.rightTrigger().whileTrue(intake.Intake());
+        Constants.OperatorConstants.driverController.b().onTrue(shooter.Discard());
 
         // reset the field-centric heading on left bumper press
         Constants.OperatorConstants.driverController.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));

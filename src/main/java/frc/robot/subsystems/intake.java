@@ -89,12 +89,14 @@ public class intake extends SubsystemBase {
     }
 
     public Command Intake() {
-        return runOnce(() -> {if(!shooter.Loaded && Math.hypot(intakePose.getX()-nearestNote.getX(), intakePose.getY()-nearestNote.getY()) < .25) {
+        return runOnce(() -> {if(!shooter.Loaded && intakeRotation == -87 && Math.hypot(intakePose.getX()-nearestNote.getX(), intakePose.getY()-nearestNote.getY()) < .25) {
             shooter.Loaded = true;
-            System.out.println(notePositions.size());
+            System.out.println(nearestNote);
+            System.out.println(notePositions);
+            if (notePositions.indexOf(nearestNote) > -1) {
             notePositions.remove(notePositions.indexOf(nearestNote));
-            System.out.println(notePositions.size());
             refreshNotes();
+            }
         }});
     }
 
