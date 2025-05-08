@@ -13,6 +13,7 @@ import com.pathplanner.lib.commands.FollowPathCommand;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
@@ -22,14 +23,12 @@ import frc.robot.subsystems.shooter;
 
 public class RobotContainer {
     private double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
-    private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
+    private double MaxAngularRate = RotationsPerSecond.of(1.6).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
     /* Setting up bindings for necessary control of the swerve drive platform */
     private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
-    private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
-    private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
     private final SwerveRequest.RobotCentric forwardStraight = new SwerveRequest.RobotCentric()
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
@@ -43,9 +42,11 @@ public class RobotContainer {
     private final SendableChooser<Command> autoChooser;
 
     public RobotContainer() {
-        NamedCommands.registerCommand("Move Intake Down", intake.MoveIntakeDown());
-        NamedCommands.registerCommand("Move Intake Up", intake.MoveIntakeUp());
-        NamedCommands.registerCommand("Intake", intake.Intake());
+        NamedCommands.registerCommand("Move Intake Down", intake.moveIntakeDown());
+        NamedCommands.registerCommand("Move Intake Up", intake.moveIntakeUp());
+        NamedCommands.registerCommand("Intake", intake.intakeNote());
+        NamedCommands.registerCommand("Discard", intake.discard());
+        NamedCommands.registerCommand("ShootNote", shooter.shoot());
 
         autoChooser = AutoBuilder.buildAutoChooser("Default");
         SmartDashboard.putData("Auto Mode", autoChooser);
@@ -82,9 +83,11 @@ public class RobotContainer {
         Constants.OperatorConstants.driverController.start().and(Constants.OperatorConstants.driverController.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
         Constants.OperatorConstants.driverController.start().and(Constants.OperatorConstants.driverController.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
-        Constants.OperatorConstants.driverController.a().whileTrue(intake.MoveIntakeDown()).whileFalse(intake.MoveIntakeUp());
-        Constants.OperatorConstants.driverController.rightTrigger().whileTrue(intake.Intake());
-        Constants.OperatorConstants.driverController.b().onTrue(shooter.Discard());
+        Constants.OperatorConstants.driverController.a().whileTrue(intake.moveIntakeDown()).whileFalse(intake.moveIntakeUp());
+        Constants.OperatorConstants.driverController.leftTrigger().onTrue(Commands.runOnce(() -> intake.resetFloorNotes()));
+        Constants.OperatorConstants.driverController.rightTrigger().whileTrue(intake.intakeNote());
+        Constants.OperatorConstants.driverController.b().onTrue(intake.discard());
+        Constants.OperatorConstants.driverController.x().onTrue(shooter.shoot());
 
         // reset the field-centric heading on left bumper press
         Constants.OperatorConstants.driverController.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));

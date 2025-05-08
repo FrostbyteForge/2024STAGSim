@@ -1,7 +1,6 @@
 package frc.robot.subsystems;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -28,7 +27,7 @@ public class intake extends SubsystemBase {
     Pose3d drivePose;
     Pose2d intakePose;
     Pose2d nearestNote;
-    List<Pose2d> notePositions = new ArrayList<>();
+    List<Pose2d> notePositions = new ArrayList<Pose2d>();
 
     public void notePositions() {
         notePositions.add(new Pose2d(2.89, 6.99, Rotation2d.kZero));
@@ -42,6 +41,7 @@ public class intake extends SubsystemBase {
         notePositions.add(new Pose2d(13.67, 6.99, Rotation2d.kZero));
         notePositions.add(new Pose2d(13.67, 5.54, Rotation2d.kZero));
         notePositions.add(new Pose2d(13.67, 4.1, Rotation2d.kZero));
+        notePositions.add(new Pose2d(0, -50, Rotation2d.kZero));
     };
 
     public void refreshNotes() {
@@ -63,13 +63,31 @@ public class intake extends SubsystemBase {
         (new Pose3d(8.28, .77, .025, Rotation3d.kZero)),
         (new Pose3d(13.67, 6.99, .025, Rotation3d.kZero)),
         (new Pose3d(13.67, 5.54, .025, Rotation3d.kZero)),
-        (new Pose3d(13.67, 4.1, .025, Rotation3d.kZero))
+        (new Pose3d(13.67, 4.1, .025, Rotation3d.kZero)),
+        (new Pose3d(0, -50, -5, Rotation3d.kZero))
     };
 
     public intake(CommandSwerveDrivetrain drivetrain) {
         this.drivetrain = drivetrain;
         NotePublisher.set(notePose3D);
         notePositions();
+    }
+
+    public void resetFloorNotes() {
+        notePositions.clear();
+        notePositions.add(new Pose2d(2.89, 6.99, Rotation2d.kZero));
+        notePositions.add(new Pose2d(2.89, 5.54, Rotation2d.kZero));
+        notePositions.add(new Pose2d(2.89, 4.1, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, 7.44, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, 5.78, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, 4.1, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, 2.44, Rotation2d.kZero));
+        notePositions.add(new Pose2d(8.28, .77, Rotation2d.kZero));
+        notePositions.add(new Pose2d(13.67, 6.99, Rotation2d.kZero));
+        notePositions.add(new Pose2d(13.67, 5.54, Rotation2d.kZero));
+        notePositions.add(new Pose2d(13.67, 4.1, Rotation2d.kZero));
+        notePositions.add(new Pose2d(0, -50, Rotation2d.kZero));
+        refreshNotes();
     }
 
     public void moveIntake(int degrees) {
@@ -80,24 +98,39 @@ public class intake extends SubsystemBase {
         return run(() -> moveIntake(degrees));
     }
 
-    public Command MoveIntakeDown() {
+    public Command moveIntakeDown() {
         return runOnce(() -> IntakeDown = true);
     }
 
-    public Command MoveIntakeUp() {
+    public Command moveIntakeUp() {
         return runOnce(() -> IntakeDown = false);
     }
 
-    public Command Intake() {
-        return runOnce(() -> {if(!shooter.Loaded && intakeRotation == -87 && Math.hypot(intakePose.getX()-nearestNote.getX(), intakePose.getY()-nearestNote.getY()) < .25) {
-            shooter.Loaded = true;
-            System.out.println(nearestNote);
-            System.out.println(notePositions);
-            if (notePositions.indexOf(nearestNote) > -1) {
-            notePositions.remove(notePositions.indexOf(nearestNote));
-            refreshNotes();
-            }
-        }});
+    public void addNote(Pose2d note) {
+        notePositions.add(note);
+        refreshNotes();
+    }
+
+    public void removeNote(Pose2d note) {
+        if (notePositions.contains(note) && notePositions.indexOf(note) != -1) {
+            notePositions.remove(notePositions.indexOf(note));
+        }
+        refreshNotes();
+
+    }
+
+    public Command discard() {
+        return runOnce(() -> {
+            shooter.loaded = false;
+            addNote(intakePose);
+        }).unless(() -> !shooter.loaded);
+    }
+
+    public Command intakeNote() {
+        return runOnce(() -> {if(!shooter.loaded && intakeRotation == -87 && Math.hypot(intakePose.getX()-nearestNote.getX(), intakePose.getY()-nearestNote.getY()) < .25) {
+            shooter.loaded = true;
+            removeNote(nearestNote);
+        }}).unless(() -> notePositions.isEmpty() && nearestNote != null);
     }
 
     @Override
@@ -106,7 +139,7 @@ public class intake extends SubsystemBase {
             drivePose = new Pose3d(drivetrain.getState().Pose);
             LoadedNotePublisher.set(drivePose);
             intakePose = drivetrain.getState().Pose.transformBy(new Transform2d(-0.75, 0, Rotation2d.kZero));
-            nearestNote = new Pose2d(intakePose.nearest(notePositions).getX(), intakePose.nearest(notePositions).getY(), Rotation2d.kZero);
+            nearestNote = intakePose.nearest(notePositions);
 
             if(IntakeDown && intakeRotation > -87) {
                 intakeRotation -= 3;
